@@ -60,8 +60,11 @@ public class UnoGame extends Game {
         play();
     }
     
+    
     @Override
     public void play() {
+        
+        
         
         currentPlayer = getNextPlayer();
         clearHasDiscarded();
@@ -101,6 +104,26 @@ public class UnoGame extends Game {
     
     public void clearHasDiscarded() {
         this.hasDiscarded = false;
+    }
+    
+    public boolean isCardPlayable(UnoCard card, boolean allowWildFour) {
+        
+        UnoCard discardCard = (UnoCard) getDiscardPile().getLastCard();
+        
+        if (hasDiscarded) {
+            return false;
+        } else if (card.getValue() == UnoCard.UnoValue.WILDFOUR && allowWildFour) {
+            return true;
+        } else if (card.getValue() == UnoCard.UnoValue.WILD) {
+            return true;
+        } else if (card.getValue() != UnoCard.UnoValue.WILD
+                && card.getValue() != UnoCard.UnoValue.WILDFOUR
+                && (card.getValue() == discardCard.getValue()
+                || card.getColor() == discardCard.getColor())) {
+            return true;
+        }
+        
+        return false;
     }
     
     

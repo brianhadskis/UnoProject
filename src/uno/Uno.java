@@ -6,6 +6,7 @@
 package uno;
 
 import java.util.ArrayList;
+import java.util.Optional;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -13,8 +14,10 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.effect.ColorAdjust;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -22,6 +25,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 /**
@@ -54,11 +59,15 @@ public class Uno extends Application {
     Button btnDrawCard = new Button("Draw Card");
     Button btnEndTurn = new Button("End Turn");
     
+    Rectangle deselectBox = new Rectangle(0, WINDOW_HEIGHT / 2, WINDOW_WIDTH, WINDOW_HEIGHT / 2);
+    
     
     
     
     @Override
     public void start(Stage primaryStage) {
+        
+        deselectBox.setFill(Color.RED);
 
         for (int i = 0; i < UnoGame.MAX_PLAYERS; i++) {
             lblPlayerNames.add(new Label("Player " + (i + 1) + " Name:"));
@@ -69,6 +78,7 @@ public class Uno extends Application {
         }
         
         btnStartGame.setOnAction(new StartGame());
+        deselectBox.setOnMouseEntered(new SelectCard(-1));
         
         setupButtonPane.getChildren().add(btnStartGame);
         
@@ -108,8 +118,11 @@ public class Uno extends Application {
                 
                 
                 btnEndTurn.setOnAction(new EndTurn());
+                
                 gameButtonPane.getChildren().add(btnDrawCard);
                 gameButtonPane.getChildren().add(btnEndTurn);
+                
+                
                 
                 rootPane.setCenter(gamePane);
                 rootPane.setBottom(gameButtonPane);
@@ -132,6 +145,7 @@ public class Uno extends Application {
 
         @Override
         public void handle(ActionEvent event) {
+
             game.play();
             displayCards();
         }
@@ -147,15 +161,16 @@ public class Uno extends Application {
         }
         
         @Override
-        public void handle(MouseEvent event) {  
-                if(event.getButton() == MouseButton.PRIMARY) {
-                    game.getCurrentPlayer().showCards().setSelected(selected);    
-                }
-                else {
-                    game.getCurrentPlayer().showCards().setSelected(-1);   
-                }
-                
-                displayCards();
+        public void handle(MouseEvent event) {
+            if (selected < 0) {
+                game.getCurrentPlayer().showCards().clearSelected();
+                System.out.println("Select cleared");
+            } else {
+                game.getCurrentPlayer().showCards().setSelected(selected);
+                System.out.println("Card selected");
+            }
+
+            displayCards();
         }    
     }
     
@@ -164,9 +179,38 @@ public class Uno extends Application {
         @Override
         public void handle(MouseEvent event) {
             if (!game.hasDiscarded() && event.getButton() == MouseButton.PRIMARY && game.getCurrentPlayer().showCards().getSelected() != -1) {
-                game.getDiscardPile().addCard(game.getCurrentPlayer().showCards().giveCard(game.getCurrentPlayer().showCards().getSelected()));
+                
+                UnoCard discardCard = (UnoCard) game.getCurrentPlayer().showCards().giveCard(game.getCurrentPlayer().showCards().getSelected());
+                
+                if (discardCard.getValue() == UnoCard.UnoValue.WILD
+                        || discardCard.getValue() == UnoCard.UnoValue.WILDFOUR) {
+                    Alert dlgChooseColor = new Alert(AlertType.CONFIRMATION);
+                    ButtonType dlgBtnRed = new ButtonType("Red");
+                    ButtonType dlgBtnGreen = new ButtonType("Green");
+                    ButtonType dlgBtnBlue = new ButtonType("Blue");
+                    ButtonType dlgBtnYellow = new ButtonType("Yello");
+                    dlgChooseColor.getButtonTypes().addAll(dlgBtnRed, dlgBtnGreen, dlgBtnBlue, dlgBtnYellow);
+                    dlgChooseColor.setTitle("Choose Color");
+                    dlgChooseColor.setHeaderText("Choose the color for your wild card.");
+
+                    Optional<ButtonType> choice = dlgChooseColor.showAndWait();
+                    
+                    if (choice.get() == dlgBtnRed) {
+                        discardCard.setColor(UnoCard.UnoColor.RED);
+                    } else if (choice.get() == dlgBtnGreen) {
+                        discardCard.setColor(UnoCard.UnoColor.GREEN);
+                    } else if (choice.get() == dlgBtnBlue) {
+                        discardCard.setColor(UnoCard.UnoColor.BLUE);
+                    } else {
+                        discardCard.setColor(UnoCard.UnoColor.YELLOW);
+                    }
+
+                }
+                
+                game.getDiscardPile().addCard(discardCard);
                 game.setHasDiscarded();
-            } else if (game.hasDiscarded() && event.getButton() == MouseButton.SECONDARY) {
+                
+            } else if (game.hasDiscarded() && event.getButton() == MouseButton.PRIMARY) {
                 try {
                     game.getCurrentPlayer().addCard(game.getDiscardPile().giveCard(game.getDiscardPile().getLastCard()));
                     game.clearHasDiscarded();
@@ -186,6 +230,17 @@ public class Uno extends Application {
         
         displayedHand.clear();
         gamePane.getChildren().clear();
+        gamePane.getChildren().add(deselectBox);
+        
+        boolean canUseWildFour = true;
+        
+        for (int i = 0; i < game.getCurrentPlayer().showCards().getSize(); i++) {
+            UnoCard card = (UnoCard) game.getCurrentPlayer().showCards().getCard(i);
+            if (game.isCardPlayable(card, false)) {
+                canUseWildFour = false;
+            }
+            
+        }
         
         double handWidth = UnoCard.getWidth();
         
@@ -204,8 +259,19 @@ public class Uno extends Application {
             } else {
                 displayedHand.get(i).setY(WINDOW_HEIGHT - (UnoCard.getHeight() + (HAND_CARD_OFFSET - 40)));
             }
-            displayedHand.get(i).setOnMouseClicked(new SelectCard(i));
-            
+            if (game.isCardPlayable(card, canUseWildFour)) {
+                displayedHand.get(i).setOnMouseEntered(new SelectCard(i));
+                displayedHand.get(i).setOnMouseClicked(new DiscardCard());
+                displayedHand.get(i).setEffect(null);
+            } else {
+                displayedHand.get(i).setOnMouseEntered(null);
+                displayedHand.get(i).setOnMouseClicked(null);
+                ColorAdjust cardDim = new ColorAdjust();
+                cardDim.setBrightness(-0.6);
+                cardDim.setSaturation(0.1);
+                displayedHand.get(i).setEffect(cardDim);
+            }
+
             gamePane.getChildren().add(displayedHand.get(i));
             
             cardXPos += HAND_CARD_OFFSET;
@@ -214,6 +280,7 @@ public class Uno extends Application {
         UnoCard discardCard = (UnoCard) game.getDiscardPile().getLastCard();
         discardCard.getImage().setX((WINDOW_WIDTH - UnoCard.getWidth()) / 2);
         discardCard.getImage().setY(40);
+        discardCard.getImage().setOnMouseEntered(null);
         discardCard.getImage().setOnMouseClicked(new DiscardCard());
         gamePane.getChildren().add(discardCard.getImage());
     }

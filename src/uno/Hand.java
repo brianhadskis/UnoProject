@@ -25,4 +25,8 @@ public class Hand extends GroupOfCards {
         this.selectedCard = selectedCard;
     }
     
+    public void clearSelected() {
+        this.selectedCard = -1;
+    }
+    
 }
