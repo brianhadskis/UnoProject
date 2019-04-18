@@ -223,7 +223,6 @@ public class UnoGameTest {
         boolean expResult = true;
         boolean result = instance.isCardPlayable(card, allowWildFour);
         assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
     }
     
     /**
@@ -248,7 +247,6 @@ public class UnoGameTest {
         boolean expResult = false;
         boolean result = instance.isCardPlayable(card, allowWildFour);
         assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
     }
     
     /**
@@ -273,7 +271,6 @@ public class UnoGameTest {
         boolean expResult = true;
         boolean result = instance.isCardPlayable(card, allowWildFour);
         assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
     }
 
 //    /**

@@ -24,8 +24,10 @@ public class UnoGame extends Game {
 //    private boolean skipTurn = false;
     private boolean reverseTurn = false;
     private boolean firstTurn = true;
+    private boolean firstCard = true;
     private boolean hasDiscarded = false;
     private boolean hasDrawn = false;
+    private int theWinner = -1;
     
     private ArrayList<UnoPlayer> players = new ArrayList();
 
@@ -44,8 +46,7 @@ public class UnoGame extends Game {
     }
     
     public void setup() throws Exception {
-//        this.playState = true;
-//        this.gameState = true;
+
         
         
         deck.shuffle();
@@ -63,12 +64,74 @@ public class UnoGame extends Game {
         System.out.println("play() done");
     }
     
+    private void assignPoints() {
+        for (int j = 0; j < players.size(); j++) {
+            for (int i = 0; i < players.get(j).showCards().getSize(); i++) {
+                UnoCard card = (UnoCard) players.get(j).showCards().getCard(i);
+                card.getImage().setEffect(null);
+                getCurrentPlayer().addScore(card.getPointValue());
+            }
+        }
+        
+        if (getCurrentPlayer().getScore() >= 500) {
+            declareWinner();
+        }
+    }
+    
+    private void startNewRound() throws Exception {
+        while (discard.getSize() > 0) {
+            deck.addCard(discard.dealCard());
+        }
+        
+        for (int j = 0; j < players.size(); j++) {
+            while (players.get(j).showCards().getSize() > 0) {
+                deck.addCard(players.get(j).dealCard());
+            }
+            players.get(j).setForcedDraw(0);
+            players.get(j).setSkipTurn(false);
+        }
+        
+        firstTurn = true;
+        firstCard = true;
+        reverseTurn = false;
+        
+        deck.shuffle();
+        System.out.println("Shuffle done");
+        for (int i = 0; i < 7; i++) {
+            for (int j = 0; j < players.size(); j++) {
+                players.get(j).addCard(deck.dealCard());
+            }
+        }
+        System.out.println("Dealing done");
+        discard.addCard(deck.dealCard());
+        System.out.println("discard pile done");
+        
+        play();
+        System.out.println("play() done");
+    }
     
     @Override
     public void play() {
         
+        if (firstCard && getDiscardPile().getSize() > 1) {
+            firstCard = false;
+        }
+        
+        if (getCurrentPlayer().showCards().getSize() == 0) {
+            try {
+                assignPoints();
+                startNewRound();
+                return;
+            } catch (Exception ex) {
+                // Need this here as parent play method does not throw exception.
+                Alert dlgGenericError = new Alert(Alert.AlertType.ERROR);
+                dlgGenericError.setContentText(ex.toString());
+                dlgGenericError.show();
+            }
+        }
+        
         UnoCard discardTopCard = (UnoCard) discard.getLastCard();
-        if (discardTopCard.getValue() == UnoCard.UnoValue.REVERSE) {
+        if (discardTopCard.getValue() == UnoCard.UnoValue.REVERSE && hasDiscarded()) {
             this.reverseTurn = !this.reverseTurn;
         }
         if (firstTurn) {
@@ -78,14 +141,14 @@ public class UnoGame extends Game {
             getCurrentPlayer().setForcedDraw(0);
             currentPlayer = getNextPlayer();
         }
-        System.out.println("Next player selected");
-        if (discardTopCard.getValue() == UnoCard.UnoValue.SKIP) {
+//        System.out.println("Next player selected");
+        if (discardTopCard.getValue() == UnoCard.UnoValue.SKIP && hasDiscarded) {
 //            this.skipTurn = true;
             getCurrentPlayer().setSkipTurn(true);
+            System.out.println("Skip is set " + currentPlayer);
         } 
         
         if (discardTopCard.getValue() == UnoCard.UnoValue.DRAW) {
-//            this.forceDraw = true;
             getCurrentPlayer().setForcedDraw(2);
         } else if (discardTopCard.getValue() == UnoCard.UnoValue.WILDFOUR) {
             getCurrentPlayer().setForcedDraw(4);
@@ -150,6 +213,7 @@ public class UnoGame extends Game {
             nextPlayer -= players.size();
         }
         
+//        System.out.println("Next Player: " + nextPlayer);
         return nextPlayer;
     }
     
@@ -213,6 +277,18 @@ public class UnoGame extends Game {
         return this.firstTurn;
     }
     
+    public boolean isFirstCard() {
+        return this.firstCard;
+    }
+    
+    public void setIsFirstCard(boolean firstCard) {
+        this.firstCard = firstCard;
+    }
+    
+    public int getTheWinner() {
+        return this.theWinner;
+    }
+    
 //    public boolean skipThisTurn() {
 //        return this.skipTurn;
 //    }
@@ -221,9 +297,12 @@ public class UnoGame extends Game {
         
         UnoCard discardCard = (UnoCard) getDiscardPile().getLastCard();
         
+//        System.out.println("discard: " + hasDiscarded);
+//        System.out.println("drawn: " + hasDrawn);
+        
         if (hasDiscarded || hasDrawn) {
             return false;
-        } else if (firstTurn && (discardCard.getValue() == UnoCard.UnoValue.WILD
+        } else if (firstCard && (discardCard.getValue() == UnoCard.UnoValue.WILD
                 || discardCard.getValue() == UnoCard.UnoValue.WILDFOUR
                 || discardCard.getValue() == UnoCard.UnoValue.SHIELD)) {
             return true;
@@ -248,8 +327,15 @@ public class UnoGame extends Game {
     
 
     @Override
-    public void declareWinner() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public int declareWinner() {
+        int winner = 0;
+        for (int i = 0; i < getUnoPlayers().size(); i++) {
+            if (getUnoPlayers().get(i).getScore() > getUnoPlayers().get(winner).getScore()) {
+                winner = i;
+            }
+        }
+        
+        return winner;
     }
 
 }
