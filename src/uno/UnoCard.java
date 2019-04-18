@@ -17,7 +17,11 @@ public class UnoCard extends Card {
     private String cardName = new String();
     
     private ImageView cardImage = new ImageView();
-    private static ImageView cardBack = new ImageView("images/CARD_BACK.jpg");
+    private static ImageView cardBack;
+    
+    public UnoCard() {
+        this.cardBack = new ImageView("images/CARD_BACK.jpg");
+    }
     
     public static enum UnoValue {
         ZERO("Zero"),
@@ -34,7 +38,8 @@ public class UnoCard extends Card {
         REVERSE("Reverse Turns"),
         DRAW("Draw Two"),
         WILD("Wild Card"),
-        WILDFOUR("Wild Card - Draw Four");
+        WILDFOUR("Wild Card - Draw Four"),
+        SHIELD("Shield Card");
         private String valueName;
         private UnoValue(String v) {
             this.valueName = v;
@@ -83,7 +88,6 @@ public class UnoCard extends Card {
     public void setColor(UnoColor color) {
         this.color = color;
     }
-    //private int value = -1;
     
     public void setImage(ImageView cardImage) {
         this.cardImage = cardImage;
@@ -107,7 +111,7 @@ public class UnoCard extends Card {
     
     @Override
     public String toString() {
-        if (this.value != UnoValue.WILD && this.value != UnoValue.WILDFOUR) {
+        if (this.value != UnoValue.WILD && this.value != UnoValue.WILDFOUR && this.value != UnoValue.SHIELD) {
             cardName = color.colorName + value.valueName;
         } else {
             cardName = value.valueName;

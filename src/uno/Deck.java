@@ -28,7 +28,7 @@ public class Deck extends GroupOfCards {
                     UnoCard uCard = new UnoCard();
                     uCard.setColor(c);
                     uCard.setValue(v);
-                    if (v != UnoCard.UnoValue.WILD && v != UnoCard.UnoValue.WILDFOUR) {
+                    if (v != UnoCard.UnoValue.WILD && v != UnoCard.UnoValue.WILDFOUR && v != UnoCard.UnoValue.SHIELD) {
                         ImageView cardImage = new ImageView("images/" + c + "_" + v + ".jpg");
                         uCard.setImage(cardImage);
                     } else {
@@ -40,11 +40,11 @@ public class Deck extends GroupOfCards {
         }
         for (UnoCard.UnoColor c : UnoCard.UnoColor.values()) {
                 for (UnoCard.UnoValue v : UnoCard.UnoValue.values()) {
-                    if (v != UnoCard.UnoValue.ZERO && v != UnoCard.UnoValue.WILD && v != UnoCard.UnoValue.WILDFOUR) {
+                    if (v != UnoCard.UnoValue.ZERO && v != UnoCard.UnoValue.WILD && v != UnoCard.UnoValue.WILDFOUR && v != UnoCard.UnoValue.SHIELD) {
                         UnoCard uCard = new UnoCard();
                         uCard.setColor(c);
                         uCard.setValue(v);
-                        if (v != UnoCard.UnoValue.WILD && v != UnoCard.UnoValue.WILDFOUR) {
+                        if (v != UnoCard.UnoValue.WILD && v != UnoCard.UnoValue.WILDFOUR && v != UnoCard.UnoValue.SHIELD) {
                             ImageView cardImage = new ImageView("images/" + c + "_" + v + ".jpg");
                             uCard.setImage(cardImage);
                         } else {

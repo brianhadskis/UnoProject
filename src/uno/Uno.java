@@ -6,7 +6,10 @@
 package uno;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -26,7 +29,9 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 /**
@@ -43,10 +48,16 @@ public class Uno extends Application {
     HBox setupButtonPane = new HBox();
     HBox gameButtonPane = new HBox();
     
+    Circle playerIndicator = new Circle();
+    
+    ArrayList<Text> infoPlayerNames= new ArrayList();
+    ArrayList<Text> infoPlayerCardsInHand = new ArrayList();
+    ArrayList<Text> infoPlayerPoints = new ArrayList();
+    
     ArrayList<ImageView> displayedHand = new ArrayList();
     
-    final int WINDOW_HEIGHT = 600;
-    final int WINDOW_WIDTH = 800;
+    final int WINDOW_HEIGHT = 768;
+    final int WINDOW_WIDTH = 1024;
     
     final int HAND_CARD_OFFSET = 60;
     
@@ -59,7 +70,7 @@ public class Uno extends Application {
     Button btnDrawCard = new Button("Draw Card");
     Button btnEndTurn = new Button("End Turn");
     
-    Rectangle deselectBox = new Rectangle(0, WINDOW_HEIGHT / 2, WINDOW_WIDTH, WINDOW_HEIGHT / 2);
+    Rectangle deselectBox = new Rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     
     
     
@@ -67,7 +78,8 @@ public class Uno extends Application {
     @Override
     public void start(Stage primaryStage) {
         
-        deselectBox.setFill(Color.RED);
+        deselectBox.setFill(Color.DARKGREEN);
+        playerIndicator.setFill(Color.WHITE);
 
         for (int i = 0; i < UnoGame.MAX_PLAYERS; i++) {
             lblPlayerNames.add(new Label("Player " + (i + 1) + " Name:"));
@@ -92,6 +104,13 @@ public class Uno extends Application {
         primaryStage.setTitle("UNO!");
         primaryStage.setScene(scene);
         primaryStage.show();
+        Parameters params = getParameters();
+        List<String> paramList = params.getRaw();
+        if (paramList.size() > 0) {
+            if(paramList.get(0).equals("test")) {
+                primaryStage.close();
+            }
+        }
     }
     
     public class StartGame implements EventHandler<ActionEvent> {
@@ -115,9 +134,10 @@ public class Uno extends Application {
                 }
                 
                 game.initialize(playerList);
-                
+                System.out.println("Initialize done");
                 
                 btnEndTurn.setOnAction(new EndTurn());
+                btnDrawCard.setOnAction(new DrawCard());
                 
                 gameButtonPane.getChildren().add(btnDrawCard);
                 gameButtonPane.getChildren().add(btnEndTurn);
@@ -127,10 +147,24 @@ public class Uno extends Application {
                 rootPane.setCenter(gamePane);
                 rootPane.setBottom(gameButtonPane);
                 
-
                 game.setup();
+                System.out.println("Setup done");
+                
+                System.out.println(game.getUnoPlayers().size());
+                for (int i = 0; i < game.getUnoPlayers().size(); i++) {
+                    infoPlayerNames.add(new Text(10 + (i * 80), 20, game.getUnoPlayers().get(i).getPlayerID()));
+                    infoPlayerCardsInHand.add(new Text(10 + (i * 80), 40, "Cards: " + Integer.toString(game.getUnoPlayers().get(i).showCards().getSize())));
+                    infoPlayerPoints.add(new Text(10 + (i * 80), 60, "Points: " + Integer.toString(game.getUnoPlayers().get(i).getScore())));
+                    
+                    infoPlayerNames.get(i).setFill(Color.WHITE);
+                    
+                    infoPlayerCardsInHand.get(i).setFill(Color.WHITE);
+                    
+                    infoPlayerPoints.get(i).setFill(Color.WHITE);
+                }
                 
                 displayCards();
+                displayGameInfo();
                 
                 
             } catch (Exception ex) {
@@ -147,7 +181,9 @@ public class Uno extends Application {
         public void handle(ActionEvent event) {
 
             game.play();
+            btnDrawCard.setDisable(false);
             displayCards();
+            displayGameInfo();
         }
         
     }
@@ -164,13 +200,14 @@ public class Uno extends Application {
         public void handle(MouseEvent event) {
             if (selected < 0) {
                 game.getCurrentPlayer().showCards().clearSelected();
-                System.out.println("Select cleared");
+//                System.out.println("Select cleared");
             } else {
                 game.getCurrentPlayer().showCards().setSelected(selected);
-                System.out.println("Card selected");
+//                System.out.println("Card selected");
             }
 
             displayCards();
+            displayGameInfo();
         }    
     }
     
@@ -183,12 +220,13 @@ public class Uno extends Application {
                 UnoCard discardCard = (UnoCard) game.getCurrentPlayer().showCards().giveCard(game.getCurrentPlayer().showCards().getSelected());
                 
                 if (discardCard.getValue() == UnoCard.UnoValue.WILD
-                        || discardCard.getValue() == UnoCard.UnoValue.WILDFOUR) {
+                        || discardCard.getValue() == UnoCard.UnoValue.WILDFOUR
+                        || discardCard.getValue() == UnoCard.UnoValue.SHIELD) {
                     Alert dlgChooseColor = new Alert(AlertType.CONFIRMATION);
                     ButtonType dlgBtnRed = new ButtonType("Red");
                     ButtonType dlgBtnGreen = new ButtonType("Green");
                     ButtonType dlgBtnBlue = new ButtonType("Blue");
-                    ButtonType dlgBtnYellow = new ButtonType("Yello");
+                    ButtonType dlgBtnYellow = new ButtonType("Yellow");
                     dlgChooseColor.getButtonTypes().addAll(dlgBtnRed, dlgBtnGreen, dlgBtnBlue, dlgBtnYellow);
                     dlgChooseColor.setTitle("Choose Color");
                     dlgChooseColor.setHeaderText("Choose the color for your wild card.");
@@ -209,11 +247,13 @@ public class Uno extends Application {
                 
                 game.getDiscardPile().addCard(discardCard);
                 game.setHasDiscarded();
+                btnDrawCard.setDisable(true);
                 
             } else if (game.hasDiscarded() && event.getButton() == MouseButton.PRIMARY) {
                 try {
                     game.getCurrentPlayer().addCard(game.getDiscardPile().giveCard(game.getDiscardPile().getLastCard()));
                     game.clearHasDiscarded();
+                    btnDrawCard.setDisable(false);
                 } catch (Exception ex) {
                     Alert dlgAlert = new Alert(AlertType.ERROR);
                     dlgAlert.setContentText(ex.toString());
@@ -223,7 +263,27 @@ public class Uno extends Application {
             game.getCurrentPlayer().showCards().setSelected(-1);
             
             displayCards();
+            displayGameInfo();
         }
+    }
+    
+    public class DrawCard implements EventHandler<ActionEvent> {
+
+        @Override
+        public void handle(ActionEvent event) {
+            try {
+                game.drawCard();
+            } catch (Exception ex) {
+                Alert dlgError = new Alert(AlertType.ERROR);
+                dlgError.setTitle("Can't draw card!");
+                dlgError.show();
+            }
+            
+            game.setHasDrawn();
+            btnDrawCard.setDisable(true);
+            displayCards();
+            displayGameInfo();
+        }    
     }
     
     public void displayCards() {
@@ -239,7 +299,6 @@ public class Uno extends Application {
             if (game.isCardPlayable(card, false)) {
                 canUseWildFour = false;
             }
-            
         }
         
         double handWidth = UnoCard.getWidth();
@@ -279,10 +338,102 @@ public class Uno extends Application {
         
         UnoCard discardCard = (UnoCard) game.getDiscardPile().getLastCard();
         discardCard.getImage().setX((WINDOW_WIDTH - UnoCard.getWidth()) / 2);
-        discardCard.getImage().setY(40);
+        discardCard.getImage().setY(120);
         discardCard.getImage().setOnMouseEntered(null);
         discardCard.getImage().setOnMouseClicked(new DiscardCard());
         gamePane.getChildren().add(discardCard.getImage());
+    }
+    
+    public void displayGameInfo() {
+        for (int i = 0; i < game.getUnoPlayers().size(); i++) {
+            UnoPlayer player = game.getUnoPlayers().get(i);
+            
+            infoPlayerCardsInHand.get(i).setText("Cards: " + Integer.toString(player.showCards().getSize()));
+            infoPlayerPoints.get(i).setText("Points: " + Integer.toString(player.getScore()));
+            
+            if (player.equals(game.getCurrentPlayer())) {
+                playerIndicator.setCenterX((i * 80) + 40);
+                playerIndicator.setCenterY(100);
+                playerIndicator.setRadius(10);
+                gamePane.getChildren().add(playerIndicator);
+            }
+            
+            gamePane.getChildren().add(infoPlayerNames.get(i));
+            gamePane.getChildren().add(infoPlayerCardsInHand.get(i));
+            gamePane.getChildren().add(infoPlayerPoints.get(i));
+             
+        }
+        
+        
+        
+        UnoCard discardCard = (UnoCard) game.getDiscardPile().getLastCard();
+        boolean hasShield = false;
+        if (game.getCurrentPlayer().getSkipTurn() && !game.isFirstTurn()) {
+            if (discardCard.getValue() == UnoCard.UnoValue.SKIP) {
+                for (int i = 0; i < game.getCurrentPlayer().showCards().getSize(); i++) {
+                    UnoCard shieldCheck = (UnoCard) game.getCurrentPlayer().showCards().getCard(i);
+                    if (shieldCheck.getValue() == UnoCard.UnoValue.SHIELD) {
+                        hasShield = true;
+                        Alert dlgPlayShield = new Alert(AlertType.CONFIRMATION);
+                        dlgPlayShield.setTitle("Skip Turn");
+                        dlgPlayShield.setHeaderText("A player has skipped your turn! Would you like to play your Shield card to bounce it back to them?");
+                        Optional<ButtonType> result = dlgPlayShield.showAndWait();
+                        
+                        if (result.get() == ButtonType.OK) {
+                            try {
+                                game.getDiscardPile().addCard(game.getCurrentPlayer().showCards().giveCard(shieldCheck));
+                                game.getShieldTarget().setSkipTurn(true);
+                                game.getCurrentPlayer().setSkipTurn(false);
+
+                            } catch (Exception ex) {
+                                Alert dlgError = new Alert(AlertType.ERROR);
+                                dlgError.setTitle("Couldn't play the Shield card!!!");
+                                dlgError.show();
+                            }
+                        }
+                        else {
+                            btnEndTurn.fire();
+                        }
+                    }
+                }
+            }
+            
+            if (!hasShield || discardCard.getValue() != UnoCard.UnoValue.SKIP) {
+                btnEndTurn.fire();
+            }
+            
+        } else if (game.getCurrentPlayer().getForcedDraw() > 0 && !game.isFirstTurn()) {
+            for (int i = 0; i < game.getCurrentPlayer().showCards().getSize(); i++) {
+                UnoCard shieldCheck = (UnoCard) game.getCurrentPlayer().showCards().getCard(i);
+                if (shieldCheck.getValue() == UnoCard.UnoValue.SHIELD) {
+                    hasShield = true;
+                    Alert dlgPlayShield = new Alert(AlertType.CONFIRMATION);
+                    dlgPlayShield.setTitle("Draw Cards (" + game.getCurrentPlayer().getForcedDraw() + ")");
+                    dlgPlayShield.setHeaderText("A player is making you draw cards! Would you like to play your Shield card to bounce it back to them?");
+                    Optional<ButtonType> result = dlgPlayShield.showAndWait();
+                    
+                    if (result.get() == ButtonType.OK) {
+                        try {
+                            game.getDiscardPile().addCard(game.getCurrentPlayer().showCards().giveCard(shieldCheck));
+                            game.getShieldTarget().setForcedDraw(-game.getCurrentPlayer().getForcedDraw());
+                            game.getCurrentPlayer().setForcedDraw(0);
+                            
+                        } catch (Exception ex) {
+                            Alert dlgError = new Alert(AlertType.ERROR);
+                            dlgError.setTitle("Couldn't play the Shield card!!!");
+                            dlgError.show();
+                        }
+                    } else {
+                        game.forceDraw();
+                    }
+                }
+            }
+            if (!hasShield) {
+                game.forceDraw();
+            }
+        } else if (game.getCurrentPlayer().getForcedDraw() < 0 && !game.isFirstTurn()) {
+            game.forceDraw();
+        }
     }
 
     /**

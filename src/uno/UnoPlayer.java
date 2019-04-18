@@ -14,6 +14,8 @@ public class UnoPlayer extends Player {
 
     private Hand hand = new Hand(0);
     private int score = 0;
+    private boolean skipTurn = false;
+    private int forcedDraw = 0;
     
     
     public UnoPlayer(String name) {
@@ -47,6 +49,26 @@ public class UnoPlayer extends Player {
     
     public void addScore(int score) {
         this.score += score;
+    }
+    
+    public boolean getSkipTurn() {
+        return this.skipTurn;
+    }
+    
+    public void setSkipTurn(boolean skipTurn) {
+        this.skipTurn = skipTurn;
+    }
+    
+    public int getForcedDraw() {
+        return this.forcedDraw;
+    }
+    
+    public void setForcedDraw(int forcedDraw) {
+        if (this.forcedDraw < 0 && forcedDraw > 0) {
+            this.forcedDraw -= forcedDraw;
+        } else {
+            this.forcedDraw = forcedDraw;
+        }
     }
 
 }
